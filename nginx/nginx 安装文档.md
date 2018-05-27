@@ -1,0 +1,162 @@
+<!-- TOC -->
+
+- [linux下安装nginx](#linux下安装nginx)
+    - [编译时添加编译选项](#编译时添加编译选项)
+        - [开启debug日志调试信息显示](#开启debug日志调试信息显示)
+        - [配置ssl和ssl证书](#配置ssl和ssl证书)
+        - [其他编译项](#其他编译项)
+    - [配置示例](#配置示例)
+    - [启动nginx](#启动nginx)
+    - [配置及使用](#配置及使用)
+        - [access日志格式设置](#access日志格式设置)
+        - [nginx添加自定义HTTP响应头](#nginx添加自定义http响应头)
+
+<!-- /TOC -->
+
+**********************************************************
+
+# linux下安装nginx
+[参考链接](http://blog.csdn.net/chris_111x/article/details/52486670)
+1、编译, ./configure
+2、安装, make && make install
+3、配置
+4、启动
+
+## 编译时添加编译选项
+./configure --prefix=/usr/local/nginx-debug --with-debug --with-http_ssl_module
+
+### 开启debug日志调试信息显示
+--with-debug
+[参考链接](http://blog.csdn.net/defonds/article/details/11612247)
+
+### 配置ssl和ssl证书
+--with-http_ssl_module
+[配置SSL模块参考链接](https://www.cnblogs.com/saneri/p/5391821.html))
+[linux下的openssl安装，参考链接](https://www.jianshu.com/p/907314d42b95)
+通常生成v1证书就足够了（配置见示例中的配置）
+
+### 其他编译项
+```
+./configure \
+--prefix==/usr/local/nginx-1.11.1 \
+--conf-path=/etc/nginx/nginx.conf \
+--error-log-path=/var/log/nginx/error.log \
+--http-log-path=/var/log/nginx/access.log \
+--pid-path=/var/run/nginx/nginx.pid \
+--lock-path=/var/lock/nginx.lock \
+--user=nginx \
+--group=nginx \
+--with-http_ssl_module \
+--with-http_flv_module \
+--with-http_stub_status_module \
+--with-http_gzip_static_module \
+--http-client-body-temp-path=/var/tmp/nginx/client/ \
+--http-proxy-temp-path=/var/tmp/nginx/proxy/ \
+--http-fastcgi-temp-path=/var/tmp/nginx/fcgi/ \
+--with-pcre
+```
+
+## 配置示例
+```
+#user  nobody;
+#设置启动几个进程，根据cpu的核数进行设置
+worker_processes  1;
+
+#启动日志文件
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+#设置连接数
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #添加自定义的conf文件，通常用于不同域名用不同文件配置
+    include vhost/*.conf;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+    error_log  logs/error.log  debug; #添加debug日志
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #设置长连接超时时间
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    #一个server对应一个域名
+    server {
+        listen       88;        #监听端口，即nginx服务端口
+        server_name  localhost; #设置服务域名
+        #root /www/docs         #设置根目录，也可在location中设置
+
+        #charset koi8-r;
+        #access日志，不开启时要显示关闭: access_log off;
+        #access_log  logs/host.access.log  main;
+
+        location / {
+        #    return 200;                #设置任务请求直接响应200
+            root   /www/docs;
+            index  index.html index.htm; #设置默认文件
+        }
+        #设置404时响应的文件
+        #error_page  404              /404.html;
+
+        #设置5XX时响应的文件
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /www/docs;
+        }
+        error_page   405 =200  /index.html;
+        location = /index.html {
+            root   /www/docs;
+        }
+    }
+
+    #HTTPS server
+    server {
+        listen       443 ssl;
+        server_name  www.myhttps.com;
+        ssl on;  #开启ssl
+
+        ssl_certificate      server.crt;
+        ssl_certificate_key  server.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+
+        ssl_protocols SSLv2 SSLv3 TLSv1;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+
+        location / {
+            #root   html;
+            root   /www/docs;
+            index  index.html index.htm;
+        }
+    }
+}
+
+```
+## 启动nginx
+/usr/local/nginx-debug/sbin/nginx -c /usr/local/nginx-debug/conf/nginx.conf
+
+## 配置及使用
+### access日志格式设置
+[参考链接](http://blog.csdn.net/czlun/article/details/73251723)
+### nginx添加自定义HTTP响应头
+[参考链接](http://www.6san.com/767/)
