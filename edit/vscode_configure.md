@@ -15,7 +15,10 @@
 
 <!-- /TOC -->
 
+***********************************************
+
 查看vs code的官网说明，可以解决很多问题。官网的地址：https://code.visualstudio.com/docs/?dv=win。
+卸载重装：[参考链接](https://blog.csdn.net/qq_36279445/article/details/79650059)
 
 # 主题
 **文件（首选项） -> 设置 -> 颜色主题**
@@ -23,13 +26,14 @@
 其他主题： monokai
 
 # markdown插件
-表格格式化： table format 
-
+- 表格格式化： table format
+- markdown的outline: code outline
 
 ## 代码相关插件
 - 自动补全： include autocomplete
 - 括号高亮匹配： Bracket Pair Colorizer
 - 字符数统计： word count
+- 行高亮插件： hightlight line
 
 # git配置环境
 [参考链接] (https://www.cnblogs.com/geekfeier/p/7649695.html)
@@ -82,9 +86,9 @@ F11 切换全屏
 }
 ```
 # 编译c代码
-右键点击callback.c，选择在命令提示符中打开
-编译： gcc -g -o main callback.c
-运行： ./main
+右键点击callback.c，选择在命令提示符中打开  
+编译： gcc -g -o main callback.c  
+运行： ./main  
 
 # 运行python代码
 ## 安装环境
@@ -93,10 +97,10 @@ python -m pip install --upgrade pip
 pip install pylint
 
 ## 切换到调试
-添加一个断点，然后按F5进入调试
-F5：调试/继续，
-F10：单步跳过，
-F11：单步进入，
-Shift+F11：跳出
-F9：切换断点
+添加一个断点，然后按F5进入调试  
+F5：调试/继续，  
+F10：单步跳过，  
+F11：单步进入，  
+Shift+F11：跳出  
+F9：切换断点  
 
