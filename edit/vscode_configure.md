@@ -1,16 +1,20 @@
 <!-- TOC -->
 
 - [主题](#主题)
-- [markdown插件](#markdown插件)
-    - [代码相关插件](#代码相关插件)
+- [markdown插件及使用](#markdown插件及使用)
+    - [markdown插件](#markdown插件)
+    - [markdown格式化表格](#markdown格式化表格)
+    - [markdown预览](#markdown预览)
+    - [markdown插入目录及目录更新](#markdown插入目录及目录更新)
+- [其他相关插件](#其他相关插件)
 - [git配置环境](#git配置环境)
 - [快捷键](#快捷键)
     - [代码相关](#代码相关)
-        - [内容及文件查找](#内容及文件查找)
+    - [内容及文件查找](#内容及文件查找)
 - [设置](#设置)
 - [编译c代码](#编译c代码)
 - [运行python代码](#运行python代码)
-    - [安装环境](#安装环境)
+    - [安装python环境](#安装python环境)
     - [切换到调试](#切换到调试)
 
 <!-- /TOC -->
@@ -25,11 +29,27 @@
 主题名称： one dark pro
 其他主题： monokai
 
-# markdown插件
+# markdown插件及使用
+## markdown插件
 - 表格格式化： table format
 - markdown的outline: code outline
+- markdown的preview插件
+- markdown TOC
 
-## 代码相关插件
+## markdown格式化表格
+表格插入+表格格式化
+- ctrl + shift + p
+- 输入table，找到table insert，插入表格
+- 输入table，找到format table，格式化表格
+
+## markdown预览
+右键markdown有预览功能
+
+## markdown插入目录及目录更新
+右键markdown有插入目录的功能，默认是保存时更新。**一个使用技巧是，打开预览功能，然后根据双击标题来跳转到指定位置。**。
+另外，也可以通过outline来快捷标识，安装code outline插件之后，会在左边出现一个outline的框。
+
+# 其他相关插件
 - 自动补全： include autocomplete
 - 括号高亮匹配： Bracket Pair Colorizer
 - 字符数统计： word count
@@ -38,7 +58,7 @@
 # git配置环境
 [参考链接] (https://www.cnblogs.com/geekfeier/p/7649695.html)
 配置git环境其实就是将git的路径配置给vscode，文件 -> 首先项 -> 设置
-"git.path": "D:/Env/Git/cmd/git.exe",
+"git.path": "D:/Env/Git/cmd/git.exe"。
 
 
 # 快捷键
@@ -52,7 +72,7 @@ F11 切换全屏
 ## 代码相关
 多行注释： ctrl + /
 
-### 内容及文件查找
+## 内容及文件查找
 当前文件查找： ctrl + F
 **查找文件**： ctrl + p
 查找项目里面的内容： ctrl + shift + F
@@ -91,7 +111,7 @@ F11 切换全屏
 运行： ./main  
 
 # 运行python代码
-## 安装环境
+## 安装python环境
 python
 python -m pip install --upgrade pip
 pip install pylint

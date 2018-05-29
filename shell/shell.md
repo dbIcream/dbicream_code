@@ -21,8 +21,10 @@
     - [awk打印](#awk打印)
     - [过滤grep/fgrep](#过滤grepfgrep)
     - [sed替换](#sed替换)
-    - [md5生成](#md5生成)
-    - [crontab](#crontab)
+- [md5生成](#md5生成)
+- [crontab](#crontab)
+    - [crontab过程](#crontab过程)
+        - [系统任务调度](#系统任务调度)
 
 <!-- /TOC -->
 
@@ -65,7 +67,7 @@ ssh主机间拷贝scp: scp /home/daisy/full.tar.gz root@172.19.2.75:/home/root
 *************************************************
 # 系统信息
 ##日期
-date
+查看当前时间： date
 显示时间戳： date +%s
 
 ## 查看系统状态
@@ -128,11 +130,19 @@ sed批量替换字符串
 
 
 ******************************************************************
-## md5生成
+# md5生成
 md5sum file
 echo -n str | md5sum
 
-## crontab
+# crontab
+[参考链接](https://www.cnblogs.com/xingzc/p/5969777.html)
+crond是linux下用来周期性的执行某种任务或等待处理某些事件的一个守护进程，crond进程每分钟会定期检查是否有要执行的任务，如果有要执行的任务，则自动执行该任务。当安装完成操作系统后，默认会安装此服务工具，并且会自动启动crond进程，crond进程每分钟会定期检查是否有要执行的任务，如果有要执行的任务，则自动执行该任务。  
+**任务包括：系统任务调度和用户任务调度**
+## crontab过程
+### 系统任务调度
+对应/etc/crontab文件，就是负责系统任务调度的配置文件。
+
+
 crontab -l
 列出当前日程表、crontab -n、-r清空crontab文件内容
 */5 * * * * /usr/local/bin/checkCacheLog.sh		每5分钟执行一次
