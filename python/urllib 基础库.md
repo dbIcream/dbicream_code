@@ -25,6 +25,11 @@
 - [异常捕获](#异常捕获)
     - [添加相应的库](#添加相应的库)
     - [异常分类](#异常分类)
+- [安装相应的库](#安装相应的库)
+    - [lxml库](#lxml库)
+    - [bs4库](#bs4库)
+    - [requests库](#requests库)
+- [下载文件](#下载文件)
 
 <!-- /TOC -->
 
@@ -182,7 +187,7 @@ resp = opener.open(req)
 from urllib import error
 
 ## 异常分类
-URLError, HTTPError,
+URLError, HTTPError等
 ```
 url = "http://blog.csdn.net/cqcrejjj"
 req = urllib.request.Request(url)
@@ -196,3 +201,14 @@ except error.HTTPError as e:
 else:
     print("OK:" + resp.geturl())
 ```
+
+# 安装相应的库
+## lxml库
+pip install lxml
+## bs4库
+pip install beautifulsoup4  
+这个库
+## requests库
+pip install requests
+
+# 下载文件

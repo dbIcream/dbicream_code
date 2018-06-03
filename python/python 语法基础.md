@@ -74,6 +74,7 @@
     - [自定义异常](#自定义异常)
 - [类](#类)
     - [定义类](#定义类)
+    - [查看某个属性是否为类的成员属性](#查看某个属性是否为类的成员属性)
 
 <!-- /TOC -->
 ********************************************
@@ -285,7 +286,7 @@ capitalize()， 首字母大写
 bytes.decode(encoding = 'utf-8', errors = 'strict')
 encode(encoding = 'utf-8', errors = 'strict')
 endswith(suffix, beg=0, end=len(string))
-find(str, beg=0, end=len(string)), rfind()
+find(str, beg=0, end=len(string)), rfind(),返回首字母
 isalnum(), isalpha(), islower(), isnumeric(), isupper(), isdecimal()是否只含有十进制字符串
 join(seq), 用指定的字符串将所有元素串在一起并返回
 lstrip(), rstrip(), strip(), 截掉前面的空格字符
@@ -567,3 +568,9 @@ class Child_A(Father_A):
         super()     #调用父类的方法
         print(self.name)
 ```
+
+## 查看某个属性是否为类的成员属性
+- dir(obj), 返回成员属性的列表，如dir(request)
+- hasattr(obj, attr)，如hasattr(request, 'url')
+- getattr(obj, attr), 获取成员属性的值，如getattr(request, 'url')
+- setattr(obj, attr),设置某个属性的值
