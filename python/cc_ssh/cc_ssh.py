@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 
 '''
@@ -10,7 +10,7 @@
 
 paramiko 基于SSH用于连接服务器并执行相关操作
 pip install paramiko
-
+或者： pip3 install paramiko
 '''
 
 import paramiko
@@ -18,7 +18,6 @@ import os
 import sys
 import getopt
 import time
-
 
 class SSH_TOOLS(object):
     def __init__(self, ip, port, user, password):
@@ -66,36 +65,75 @@ class SSH_TOOLS(object):
         print(result)
         return result
 
-    
-def usage():
-    print('''
-    -h : help
-    -ip : ip
-    -p/-port : port
-    ''')
-
-
-# python test.py --password=package_maa_6.5 --src-file=test.py --dst-file=/home/caiyx/test.py
-
-if __name__ == '__main__':
+'''
+@fuction: copy src-file from current machine to remote server
+@param: dict of scp base data
+    dict must has key: ip, port, user, password, src-file, dst-file
+@return: 
+    True: copy success 
+    False: copy failed
+'''
+def ssh_copy_file(ssh_info):
     # 脚本名：sys.argv[0]
     # 参数1： sys.argv[1]
     # 参数2： sys.argv[2]
     # h表示开关选项，p:表示后面要跟一个附加参数,ip=表示--ip='10'
-    print(sys.argv[1:])
+    if isinstance(ssh_info, dict) == False:
+        print('ssh_copy_file: param error!')
+        return False
+    
+    key_list = ssh_info.keys()
+    if 'ip' not in key_list or \
+            'port' not in key_list or \
+            'user' not in key_list or \
+            'password' not in key_list or \
+            'src_file' not in key_list or \
+            'dst_file' not in key_list:
+        print('ssh_copy_file: for lack of some key')
+        return False
+    if os.path.exists(ssh_info['src_file']) == False:
+        print('ssh_copy_file: src_file:{0} is not exits'.format(ssh_info['src_file']))
+        return False
+    try:
+        ssh_tools = SSH_TOOLS(ssh_info['ip'], ssh_info['port'],\
+                ssh_info['user'] , ssh_info['password'])
+        ssh_tools.connect()
+        ssh_tools.upload_file(ssh_info['src_file'], ssh_info['dst_file'])
+        ssh_tools.close()
+    except Exception as err:
+        print('ssh_copy_file: some err occur' + str(err))
+        return False
+    return True
+
+
+def test_main():
+    ssh_info_dict = {}
+    ssh_info_dict['ip'] = '10.10.10.10'
+    ssh_info_dict['port'] = 22
+    ssh_info_dict['user'] = 'root'
+    ssh_info_dict['password'] = 'password'
+    ssh_info_dict['src_file'] = 'to.md'
+    ssh_info_dict['dst_file'] = '/home/xxx/to.md'
+    ssh_copy_file(ssh_info_dict)
+
+
+def usage():
+    print('''
+    -h : help
+    -ip : ip
+    -p/--port= : port
+    --user= :user
+    --password= :password
+    --src-file= :srcfile
+    --dst-file= :dstfile
+    ''')
+# python3 test.py --password=password --ip=10.10.10.10 --port=22 --user=root --src-file=test.py --dst-file=/home/xxx/test.py
+if __name__ == '__main__':
+    ssh_info_dict = {}
+    #print(sys.argv[1:])
     opts, args = getopt.getopt(sys.argv[1:], 'hr:p:',
                     ['ip=', 'port=', 'user=', 'password=', \
-                     'src-file=', 'dst-file=', 'src-dir=', 'dst-dir='])
-    
-    ip = '10.8.204.144'
-    port = 63501
-    user = 'root'
-    password = ''
-    src_file = ''
-    dst_file = ''
-    src_dir = ''
-    dst_dir = ''
-
+                        'src-file=', 'dst-file='])
     #获取到参数
     try:
         for op, value in opts:
@@ -103,49 +141,31 @@ if __name__ == '__main__':
                 usage()
                 sys.exit()
             elif op == '--ip':
-                ip = value
+                ssh_info_dict['ip'] = value
                 print('set ip = {}'.format(value))
             elif op == '-p' or op == '--port':
-                port = int(value)
-                print('set port = {}'.format(value))
-                
+                ssh_info_dict['port'] = int(value)
+                print('set port = {}'.format(value))  
             elif op == '--user':
-                user = value
+                ssh_info_dict['user'] = value
                 print('set user = {}'.format(value))
             elif op == '--password':
-                password = value
+                ssh_info_dict['password'] = value
                 print('set password = {}'.format(value))
                 
             elif op == '--src-file':
-                src_file = value
+                ssh_info_dict['src_file'] = value
                 print('set src-file = {}'.format(value))
             elif op == '--dst-file':
-                dst_file = value
+                ssh_info_dict['dst_file'] = value
                 print('set dst-file = {}'.format(value))
-            elif op == '--src-dir':
-                src_dir = value
-                print('set src_dir = {}'.format(value))
-            elif op == '--dst-dir':
-                dst_dir = value
-                print('set dst_dir = {}'.format(value))
             else:
                 print('unsupport opt:{}'.format(op))
     except Exception as err:
-        print('param error!\n' + str(err))
-        sys.exit()  
-
-    if password == '':
-        print('password is empty!')
-        sys.exit() 
-    if (src_file == '' and src_dir == '') or \
-        (dst_dir == '' and dst_file == ''):
-        print('src or dst is empty!')
+        print('param err    or!\n' + str(err))
         sys.exit()
-    
-    ssh_tools = SSH_TOOLS(ip, port, user, password)
-    ssh_tools.connect()
-    ssh_tools.upload_file(src_file, dst_file)
-    ssh_tools.close()
+    ## start to copy
+    ssh_copy_file(ssh_info_dict)
 
 
 
