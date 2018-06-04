@@ -71,7 +71,7 @@ git rm file
 ## 查看本地状态
 文档增加、删除、修改的状态等，
 ```
-**显示具体信息（推荐）**： git status  
+显示具体信息（推荐）： git status  
 简要显示信息： git status -s 
 ```
 
@@ -84,7 +84,7 @@ git rm file
 ```
 
 ## 同步远程仓库到本地
-主要使用git pull的这个命令  
+主要使用git pull这个命令  
 ```
 拉取远程分支github的更新： git fetch github  
 拉取远程master分支的更新： git fetch  
