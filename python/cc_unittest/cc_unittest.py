@@ -1,19 +1,20 @@
-'''
-@date: Created on 2018年4月30日
-@author: caiyx1
-'''
+# -*- coding:utf-8 -*-
+#!/usr/local/bin/python3
+
 __author__ = 'dbicream'
 
 from _overlapped import NULL
 import unittest
 
-class myUnitTest(unittest.TestCase):
+class TestCommonCase(unittest.TestCase):
 
     def setUp(self):
-        print('init by setUp...')
+        # print('init by setUp...')
+        pass
 
     def tearDown(self):
-        print('end by tearDown...')
+        # print('end by tearDown...')
+        pass
 
     def test_upper(self):
         self.assertEqual('foo'.upper(), 'FOO')
@@ -37,20 +38,25 @@ if __name__ == '__main__':
     # unittest.main()
     
     # 装载测试用例
-    test_cases = unittest.TestLoader().loadTestsFromTestCase(myUnitTest)
+    test_cases = unittest.TestLoader().loadTestsFromTestCase(TestCommonCase)
+
+    # 手动顺序加载
+    test_cases = [TestCommonCase('test_isupper'), TestCommonCase('test_split')]
     
     # 使用测试套件并打包测试用例
-    test_suit = unittest.TestSuite()
-    test_suit.addTests(test_cases)
+    suite = unittest.TestSuite()
+    suite.addTests(test_cases)
+    suite.addTest(TestCommonCase('test_null'))
     
     # 运行测试套件，并返回测试结果
-    test_result = unittest.TextTestRunner(verbosity=2).run(test_suit)
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
     
     #生成测试报告
-    print("testsRun:%s" % test_result.testsRun)
-    print("failures:%s" % len(test_result.failures))
-    print("errors:%s" % len(test_result.errors))
-    print("skipped:%s" % len(test_result.skipped))
+    # print("testsRun:%s" % result.testsRun)
+    # print("failures:%s" % len(result.failures))
+    # print("errors:%s" % len(result.errors))
+    # print("skipped:%s" % len(result.skipped))
     
     
     
