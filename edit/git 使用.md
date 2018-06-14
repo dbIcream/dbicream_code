@@ -36,7 +36,7 @@ git clone  https://github.com/dbIcream/dbicream_code.git
 ## 记住全局的用户名邮箱
 git上使用的用户名是昵称，不是邮箱  
 ```
-git config --global user.name "dbIcream"  
+git config --global user.name "dbicream"  
 git config --global user.email "doubleicream@163.com"  
 ```
 

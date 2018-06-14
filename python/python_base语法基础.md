@@ -77,8 +77,9 @@
     - [查看某个属性是否为类的成员属性](#查看某个属性是否为类的成员属性)
 - [调用系统命令](#调用系统命令)
     - [os.system("cmd")](#ossystemcmd)
-    - [os.Popen()](#ospopen)
+    - [os.popen()](#ospopen)
     - [commands.getstatusoutput](#commandsgetstatusoutput)
+    - [linux下切换python版本](#linux下切换python版本)
 
 <!-- /TOC -->
 ********************************************
@@ -585,7 +586,7 @@ class Child_A(Father_A):
 该方法在调用完shell脚本后，返回一个16进制数，低位为杀死所调用脚本的信号号码，高位为脚本的退出状态码，即脚本中的exit 1的代码执行后，os.system函数返回值的高位数就是1，如果低位数是0的情况下，则函数返回的值是0x100，换算成十进制得到256。
 要得到os.system返回值时，可以用>>8的位运算获取。**但是，这个命令不法获得返回信息**，示例os.system('ls')时，只能得到返回码，而获取不到ls的列表。
 
-## os.Popen()
+## os.popen()
 实现方式是管道，函数返回一个file-like的对象，里面的内容是脚本输出的内容。函数的原型：
 ```
 subprocess.Popen(args, bufsize=0, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=False, shell=false)
@@ -603,3 +604,6 @@ status, output = commands.getstatusoutput("ls")
 commands.getoutput("ls")  
 commands.getstatus("ls")
 ```
+
+## linux下切换python版本
+[Linux更换python版本](https://www.cnblogs.com/zrz43/p/4895635.html)
