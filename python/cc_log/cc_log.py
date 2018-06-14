@@ -15,7 +15,7 @@ class CC_Log(object):
     '''
     指定保存日志的文件路径，日志级别，以及调用文件,将日志存入到指定的文件中
     '''
-    def __init__(self, log_file, log_name = 'cc_log', log_level=logging.DEBUG):
+    def __init__(self, log_file='debug.log', log_name = 'cc_log', log_level=logging.DEBUG):
         # 创建一个logger
         self.logger = logging.getLogger(log_name)
         self.logger.setLevel(logging.DEBUG)
