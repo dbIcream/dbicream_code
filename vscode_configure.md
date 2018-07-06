@@ -1,6 +1,6 @@
 <!-- TOC -->
 
-- [主题](#主题)
+    - [主题](#主题)
 - [markdown插件及使用](#markdown插件及使用)
     - [markdown插件](#markdown插件)
     - [markdown格式化表格](#markdown格式化表格)
@@ -24,10 +24,11 @@
 查看vs code的官网说明，可以解决很多问题。官网的地址：https://code.visualstudio.com/docs/?dv=win。
 卸载重装：[参考链接](https://blog.csdn.net/qq_36279445/article/details/79650059)
 
-# 主题
+## 主题
 **文件（首选项） -> 设置 -> 颜色主题**
-主题名称： one dark pro
+深色主题： one dark pro
 其他主题： monokai
+浅色主题： Solarized Light
 
 # markdown插件及使用
 ## markdown插件

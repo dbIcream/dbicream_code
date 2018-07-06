@@ -429,7 +429,7 @@ global: 全局作用域
 推荐使用with的方式打开，这样就不用怕忘记关闭了，否则一个open()都要对应一个close()
 ```
 file_name = test.txt
-with open(file_name) ad fd_test:    #open不加参数，默认是r只读模式
+with open(file_name) as fd_test:    #open不加参数，默认是r只读模式
     # 按行读文件
     print(fd_test.readline(), end='')
     print(fd_test.readline()) 
