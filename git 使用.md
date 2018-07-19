@@ -28,70 +28,86 @@
 <!-- /TOC -->
 
 # git使用示例
+
 ## 介绍文档
+
 - [Git简介 - 廖雪峰](http://www.liaoxuefeng.com/wiki/0013739516305929606dd18361248578c67b8067c8c017b000/001373962845513aefd77a99f4145f0a2c7a7ca057e7570000)
 - [GitHub从入门到精通常用命令](http://blog.csdn.net/piaopiaopiaopiaopiao/article/details/42239651)
 
 ## git的初始化
+
 ### 初始仓库
-```
+
+```shell
 git init
 git clone  https://github.com/dbIcream/dbicream_code.git
 ```
 
 ### 记住全局的用户名邮箱
+
 git上使用的用户名是昵称，不是邮箱  
-```
+
+```shell
 git config --global user.name "dbicream"  
 git config --global user.email "doubleicream@163.com"  
 ```
 
 ### 记住密码
-```
+
+```shell
 git config --global credential.helper store  
 ```
 
 ### git修改密码后删除已经保存的密码
+
 先查看是否保存了密码： git config --list  
 编辑并删除密码（下次就会要求你重新输入）： git config --global --edit, 删除掉[credential]和store的值，即可  
 
-
 ### 查看global参数
-```
+
+```shell
 git config --list | grep helper
 ```
 
-
 ## git文件添加及提交
+
 ### 添加文件和添加全部
-```
+
+```file
 添加单个文件： git add README  
 添加全部文件： git add . 或者 git add *  
 ```
 
 ### 删除文件
-```
+
+```shell
 git rm file
 ```
 
 ### 查看本地状态
-文档增加、删除、修改的状态等，
-```
+
+文档增加、删除、修改的状态等  
+
+```log
 显示具体信息（推荐）： git status  
 简要显示信息： git status -s 
 ```
 
 ### 提交修改
+
 提交说明是必须要有的操作
-```
+
+```shell
 添加提交说明： git commit -m "this ia a change"  
 提交一个文件更新： git commit file  
 提交所有更新： git commit .  
 ```
 
 ### 同步远程仓库到本地
+
 主要使用git pull这个命令  
-```
+
+```shell
 拉取远程分支github的更新： git fetch github  
 拉取远程master分支的更新： git fetch  
 合并远程分支到本地： git merge github/master  
@@ -101,38 +117,48 @@ git rm file
 ```
 
 ### 将本地改动推送到远端仓库
-```
+
+```shell
 git push [alias] [branch]  
 git push  origin master:master  
 ```
 
 ## 其他场景
+
 ### git放弃修改，强制覆盖本地文件
+
 [参考链接](http://blog.csdn.net/tmtongming/article/details/73178997)  
 放弃本地的修改，适合确定放弃本地修改的场景。  
-```
+
+```shell
 git fetch --all  
 git reset --hard origin/master   
 git pull  
 ```
 
 ### gitignore忽略文件
+
 [参考链接](https://blog.csdn.net/u014079773/article/details/51602344)  
 首先生成一个忽略的列表的文件  
-```
+
+```file
 .gitignore  
 ```
 
-在.gitignore中添加要忽略的文件名或者目录名  
-```
+在.gitignore中添加要忽略的文件名或者目录名 
+
+```log
 file1
 *.txt
 /dir1/
 ```
+
 ### Everything up-to-date问题解决  
+
 [参考链接](https://www.jianshu.com/p/899b9e66a3db)  
 可能原因是太久没有更新，导致本地的仓库需要先做更新后才能push  
-```
+
+```shell
 # 新建分支
 git branch newbranch
 # 验证分支是否创建成功
@@ -153,19 +179,23 @@ git branch -D newbranch
 git branch -d newbranch
 ```
 
-
 ## linux下git的安装
+
 [linux下git的安装](https://blog.csdn.net/qq_35573689/article/details/73223740)  
+
 ### 下载版本
+
 [下载git源代码](https://mirrors.edge.kernel.org/pub/software/scm/git/)  
 
 ### 安装依赖
-```
+
+```shell
 yum install curl-devel expat-devel gettext-devel openssl-devel zlib-devel perl-devel
 ```
 
 ### 编译安装
-```
+
+```shell
 make configure
 make prefix=/usr/local/git-2.9.5 all
 make prefix=/usr/local/git-2.9.5 install
@@ -173,9 +203,8 @@ make prefix=/usr/local/git-2.9.5 install
 ```
 
 ### 添加到环境变量中
-编辑脚本文件： /etc/bashrc   
+
+编辑脚本文件： /etc/bashrc  
 在最后一行添加： export PATH=/usr/local/git/bin:$PATH, 保存退出  
 使配置文件生效: source /etc/bashrc, 已经打开的ssh连接窗口要先关闭，否则PATH的设置不会生效  
 验证成功： git --version, 如果提示git版本即为安装成功  
-
-
