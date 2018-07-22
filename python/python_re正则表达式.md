@@ -7,8 +7,8 @@
         - [匹配多个字符](#匹配多个字符)
         - [边界匹配](#边界匹配)
         - [逻辑、分组匹配、特殊构造](#逻辑分组匹配特殊构造)
-- [Re模块](#re模块)
-    - [匹配使用的函数](#匹配使用的函数)
+    - [Re模块](#re模块)
+        - [匹配使用的函数](#匹配使用的函数)
         - [匹配模式：flags参数](#匹配模式flags参数)
     - [match匹配结果](#match匹配结果)
         - [调用方式](#调用方式)
@@ -19,13 +19,17 @@
 <!-- /TOC -->
 
 # 正则表达式的使用
+
 [参考链接](https://cuiqingcai.com/977.html)
 
 ## 匹配规则
+
 ### 贪婪匹配
+
 注意贪婪匹配和非贪婪匹配，贪婪匹配总是尝试匹配尽的字符，非贪婪则相反。例如ab*如果是想找abbbc，贪婪匹配将找到abbb，非贪婪将找到a
 
 ### 匹配单个字符规则
+
 |  语法  |        说明         | 表达式实例 | 完整匹配的字符串 |
 | ------ | ------------------- | ---------- | ---------------- |
 | .      | 匹配任意字符        | a.c        | abc              |
@@ -36,6 +40,7 @@
 | \w \W  | 字词字符/非单词字符 | a\wc a\Wd  | abc  a c         |
 
 ### 匹配多个字符
+
 | 语法  |          说明           | 表达式实例 | 完整匹配的字符串 |
 | ----- | ----------------------- | ---------- | ---------------- |
 | *     | 匹配前一个字符0或无限次 | abc*       | ab abccc         |
@@ -44,8 +49,8 @@
 | {m}   | 匹配前一个字符m次       | ab{2}c     | abbc             |
 | {m,n} | 匹配前一个字符m到n次    | ab{2,3}c   | abbc abbbc       |
 
-
 ### 边界匹配
+
 | 语法 |                   说明                   | 表达式实例 | 完整匹配的字符串 |
 | ---- | ---------------------------------------- | ---------- | ---------------- |
 | ^    | 匹配字符串开头，多行匹配时匹配每一个结尾 | ^abc       | abc              |
@@ -56,6 +61,7 @@
 | \B   | [^\b]                                    | a\Bbc      | abc              |
 
 ### 逻辑、分组匹配、特殊构造
+
 [参考链接](https://cuiqingcai.com/977.html)
 |     语法      |          说明          |        表达式实例        | 完整匹配的字符串 |
 | ------------- | ---------------------- | ------------------------ | ---------------- |
@@ -67,17 +73,20 @@
 
 ***************************************************
 
-# Re模块
-## 匹配使用的函数
+## Re模块
+
+### 匹配使用的函数
+
 1、生成pattern对象，re.compile(string[,flag])  
-2、匹配所有： **re.match(pattern, string[, flags])**
-3、查找： re.search(pattern, string[, flags])
-4、拆分： re.split(pattern, string[, maxsplit])
-5、查找全部： re.findall(pattern, string[, flags])
-6、返回结果的迭代器：re.finditer(pattern, string[, flags]) 
-7、返回替换后的每一个字符串： re.sub(pattern, repl, string[, count])
-8、添加替换次数： re.subn(pattern, repl, string[, count])
-```
+2、匹配所有： **re.match(pattern, string[, flags])**  
+3、查找： re.search(pattern, string[, flags])  
+4、拆分： re.split(pattern, string[, maxsplit])  
+5、查找全部： re.findall(pattern, string[, flags])  
+6、返回结果的迭代器：re.finditer(pattern, string[, flags])  
+7、返回替换后的每一个字符串： re.sub(pattern, repl, string[, count])  
+8、添加替换次数： re.subn(pattern, repl, string[, count])  
+
+```python
 import re
 pattern1 = re.compile('hello')
 pattern2 = re.compile('.*\d')
@@ -92,6 +101,7 @@ list2 = re.findall(pattern2, 'hello1 hello2 hello3')
 ```
 
 ### 匹配模式：flags参数
+
 参数flag是匹配模式，取值可以使用按位或运算符’|’表示同时生效，比如re.I | re.M。
 可选值有：
 1、忽略大小写： re.I(全拼：IGNORECASE): 
@@ -102,19 +112,23 @@ list2 = re.findall(pattern2, 'hello1 hello2 hello3')
 6、详细模式： re.X(全拼：VERBOSE): 这个模式下正则表达式可以是多行，忽略空白字符，并可以加入注释。
 
 ## match匹配结果
+
 ### 调用方式
+
 m = re.match(pattern,'hello')
 m = pattern('hello')
 string: 匹配时使用的文本。
 re: 匹配时使用的Pattern对象。
 
 ### 结果的索引
+
 pos: 文本中正则表达式开始搜索的索引，通常是0
 endpos: 文本中正则表达式结束搜索的索引，通常为len(pattern.string)
 lastindex: 最后一个分组的索引，无分组时为None
 lastgroup: 最后一个被捕获的分组的**别名**，如果这个分组没有别名或者没有被捕获的分组，将为None。
 
 ### 查看结果中的分组
+
 group: 获取一个或多个分组的字符串，指定多个参数时返回元组。
 group()/group(0), group(1,2), group(2)
 groups([default]):以元组形式返回全部分组截获的字符串。相当于调用group(1,2,…last)。default表示没有截获字符串的组以这个值替代，默认为None。
@@ -123,7 +137,7 @@ groupdict([default]):
 expand(template):
 将匹配到的分组代入template中然后返回。template中可以使用\id或\g、\g引用分组，但不能使用编号0。\id与\g是等价的；但\10将被认为是第10个分组，如果你想表达\1之后是字符’0’，只能使用\g0。
 
-```
+```python
 p = re.compile('(?P<alias1>.*11) (?P<alias2>.*22) (?P=alias1) (.*33)')
 m = p.match('hello11 h22 hello11 hello33')
 print(m.lastindex)  #3
@@ -135,16 +149,8 @@ print(m.expand(r'\1 \2')) #hello11 h22
 ```
 
 ### 指定分组对应的索引位置
-1、获取groups[i]的开始序号，match1.start(i)
-2、获取groups[i]的结束序号，match1.start(i)
-3、同时获取groups[i]的开始和结束序号，match1.span(i)
-**序号要在groups()的范围内，否则会报错**
 
-
-
-
-
-
-
-
-
+1、获取groups[i]的开始序号，match1.start(i)  
+2、获取groups[i]的结束序号，match1.start(i)  
+3、同时获取groups[i]的开始和结束序号，match1.span(i)  
+**序号要在groups()的范围内，否则会报错**  
