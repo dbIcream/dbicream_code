@@ -34,7 +34,7 @@ typedef struct _hash_table {
 	hash_link *next;        /*用于遍历时，连接所有的桶时使用*/
 	int count;              /*桶里面元素的个数*/
 	int max_bucket_count;   /*最大的桶里面的个数*/
-}hash_table;
+} hash_table;
 
 extern hash_table *hash_create(HASHCMP *, int, HASHHASH *);
 extern void hash_free_items(hash_table *, HASHFREE *);

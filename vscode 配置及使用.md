@@ -10,9 +10,11 @@
     - [其他相关插件](#其他相关插件)
     - [git配置环境](#git配置环境)
     - [快捷键](#快捷键)
-        - [代码相关](#代码相关)
+        - [多行注释](#多行注释)
+        - [查看调用](#查看调用)
         - [内容及文件查找](#内容及文件查找)
     - [Dash和zeal查看文档API](#dash和zeal查看文档api)
+    - [open in browser](#open-in-browser)
     - [设置](#设置)
     - [编译c代码](#编译c代码)
     - [运行python代码](#运行python代码)
@@ -70,6 +72,7 @@
 - 字符数统计： word count
 - 行高亮插件： hightlight line
 - 单词高亮: highlight-words
+- 在浏览器中打开: open in browser
 
 ## git配置环境
 
@@ -85,11 +88,16 @@ F11 切换全屏
 跳转到上一次编辑位置： alt + 左箭头  
 跳转到下一次编辑位置： alt + 右箭头  
 将当前行上下移动一行： alt + 上下箭头  
+选中一行： ctrl + i
 
-### 代码相关
+### 多行注释
 
 多行注释： ctrl + /  
-strstr
+
+### 查看调用
+
+ctrl + shift 12 : 查看定义预览
+f12 : 跳转到定义
 
 ### 内容及文件查找
 
@@ -106,6 +114,8 @@ strstr
 
 - 安装Zeal文档库，官网下载安装即可
 - vscode安装插件: Dash, 按下ctrl + H调出zeal文档
+
+## open in browser
 
 ## 设置
 

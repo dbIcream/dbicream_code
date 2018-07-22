@@ -1,10 +1,20 @@
+/*
+@function: 将ASCII码的字符串转换成原来的字符串
+@example: 	"A00000734D638A"(orig) -> "4130303030303733344436333841"(bit64)
+			what we do is Opposite process
+@detail:  将ASCII码里面的 abcdef, ABCDEF, 1234567890, 三组字符串转换成十进制数，然后直接按位从数组里面取就可以得到转换的值。
+@author: dbicream
+*/
+
+#define TEST_OPEN 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /*
-16进制数转数字的对照表
-0-9  48-57 A-Z  65-90 a-z  97-122
+	16进制数字符与ASCII码对照表
+	0-9  48-57 A-Z  65-90 a-z  97-122
 */
 static int tb_bit16_to_num[] = {
 	0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,//0-14
@@ -27,42 +37,39 @@ static int tb_bit16_to_num[] = {
 	0,
 };
 
-static char* bit16_to_char(char *str)
+/*
+@param_in : bit64_str
+@param_out: 
+@example:  "4130303030303733344436333841"(bit64) -> "A00000734D638A"(orig)
+*/
+static char* bit16_to_char(char *bit16_str)
 {
 	static char imei[256];
 	char bit_high, bit_low;
 	int i = 0;
 	int len;
 
-	if (str == NULL) {
+	if (bit16_str == NULL) {
 		return NULL;
 	}
 
-	len = strlen(str);
-	memset(imei,0,sizeof(imei));
+	len = strlen(bit16_str);
+	if (len >= 256) {
+		printf("bit16_to_char: strlen >= 256\n");
+	}
+
+	memset(imei, 0, sizeof(imei));
 	for(i = 0; (i + i < len) && (i + i < 256); i++) {
-		bit_high = tb_bit16_to_num[str[i + i]];
-		bit_low = tb_bit16_to_num[str[i + i + 1]];
+		bit_high = tb_bit16_to_num[bit16_str[i + i]];
+		bit_low = tb_bit16_to_num[bit16_str[i + i + 1]];
 		imei[i] = (bit_high << 4) + bit_low;
 	}
 	
 	return imei;
 }
 
-
-/*
-原本字符值的值:fda02f36e047bdc90a5e507798fa2d62
-转成16进制后值变成:6664613032663336653034376264633930613565353037373938666132643632
-最终头部：:6664613032663336653034376264633930613565353037373938666132643632
-
-
-bit16_to_char(6664613032663336653034376264633930613565353037373938666132643632)=fda02f36e047bdc90a5e507798fa2d62
-bit16_to_char(4130303030303733344436333841A00000734D638A)=fda02f36e047bdc90a5e5
-bit16_to_char(383637373032303238343034303133867702028404013)=fda02f36e047bdc90a5e507
-
-*/
-
-void show_tb_bit16_to_num()
+#if TEST_OPEN
+static void show_tb_bit16_to_num()
 {
 	int i;
 	for (i = 0; i < 255; i++) {
@@ -72,32 +79,22 @@ void show_tb_bit16_to_num()
 	}
 }
 
+#endif
+
 int main()
 {
-	char header_id1[] = "4130303030303733344436333841"; 		//A00000734D638A
+	/* 声明测试用的字符串列表 */
+	char header_id1[] = "4130303030303733344436333841"; 	//A00000734D638A
 	char header_id2[] = "383637373032303238343034303133"; 	//867702028404013
-	//fda02f36e047bdc90a5e507798fa2d62
-	char header_id3[] = "6664613032663336653034376264633930613565353037373938666132643632";
 	char header_id4[] = "7E";
 
+#if TEST_OPEN
 	show_tb_bit16_to_num();
+#endif
 
 	printf("main: bit16_to_char(%s)=%s\n", header_id1, bit16_to_char(header_id1));
-	printf("main: bit16_to_char_orignal(%s)=%s\n\n", header_id1,
-			bit16_to_char_orignal(header_id1, strlen(header_id1)));
-
 	printf("main: bit16_to_char(%s)=%s\n", header_id2, bit16_to_char(header_id2));
-	printf("main: bit16_to_char_orignal(%s)=%s\n\n", header_id2,
-			bit16_to_char_orignal(header_id2, strlen(header_id2)));
-	
-	printf("main: bit16_to_char(%s)=%s\n", header_id3, bit16_to_char(header_id3));
-	printf("main: bit16_to_char_orignal(%s)=%s\n\n", header_id3,
-			bit16_to_char_orignal(header_id3, strlen(header_id3)));
-
 	printf("main: bit16_to_char(%s)=%s\n", header_id4, bit16_to_char(header_id4));
-	printf("main: bit16_to_char_orignal(%s)=%s\n\n", header_id4,
-			bit16_to_char_orignal(header_id4, strlen(header_id4)));
-	
 	return 0;
 }
 
