@@ -108,7 +108,13 @@ f12 : 跳转到定义
 在查找结果里面跳转到下一个位置： shift + F3  
 查找本文件的函数： ctrl + shift + p  
 
-- 查找所有引用的插件: find all references, 快捷键 ctrl + t
+- 查找所有引用的插件: find all references, 快捷键 ctrl + t. 依赖ripgrep库，下载安装比较麻烦
+
+```shell
+# 安装choco，windows 下的yum工具<https://chocolatey.org/install>
+# 然后安装ripgrep, 或者直接安装ripgrep: <https://github.com/BurntSushi/ripgrep/releases>
+choco install ripgrep
+```
 
 ## Dash和zeal查看文档API
 
