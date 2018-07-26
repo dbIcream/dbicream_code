@@ -1,67 +1,4 @@
-# include "cyan_dns.h"
-
-#pragma pack(push)
-#pragma pack(1)
-
-#define dns_QR(flag)      (((flag)>>7)&1)
-#define dns_opcode(flag)  (((flag)>>3)&0xf)
-#define dns_AA(flag)      (((flag)>>2)&1)
-#define dns_TC(flag)      (((flag)>>1)&1)
-#define dns_RD(flag)      ((flag)&1)
-#define dns_RA(flag)      (((flag)>>15)&1)
-#define dns_zero(flag)   (((flag)>>12)&0x7)
-#define dns_rcode(flag)   (((flag)>>8)&0xf)
-
-#define s_dns_QR(flag)        ((flag)|=(1<<7))
-#define s_dns_opcode(flag,v)  ((flag)=(flag)&~(0xf<<3)|(v<<3))
-#define s_dns_AA(flag)        ((flag)|=(1<<2))
-#define s_dns_TC(flag)        ((flag)|=(1<<1))
-#define s_dns_RD(flag)        ((flag)|=1)
-#define s_dns_RA(flag)        ((flag)|=(1<<15))
-#define s_dns_rcode(flag,v)   ((flag)=(flag)&~(0xf<<8)|(v<<8))
-
-#define c_dns_QR(flag)        ((flag)&=~(1<<7))
-#define c_dns_AA(flag)        ((flag)&=~(1<<2))
-#define c_dns_TC(flag)        ((flag)&=~(1<<1))
-#define c_dns_RD(flag)        (flag)&=~1)
-#define c_dns_RA(flag)        ((flag)&=~(1<<15))
-
-typedef struct _dns_pkt_header {
-	unsigned short id;
-/*	struct _flag{
-		unsigned short rcode:4;  // 0: OK; 2: Server Failure; 3: name error
-		unsigned short zero:3;
-		unsigned short RA:1;     // Recursion available
-		unsigned short RD:1;     // Expect recursion
-		unsigned short TC:1;     // Truncable
-		unsigned short AA:1;     // Authorized to answer
-		unsigned short opcode:4; // 0: standard query; 1: reverse query; 2: server status request
-		unsigned short QR:1;     // 0: req; 1: resp
-	} flag;*/
-	unsigned short flag;
-	unsigned short questions;
-	unsigned short Ans_RRs;
-	unsigned short Auth_RRs;
-	unsigned short Addi_RRs;
-} dns_pkt_header;
-
-/* 恢复pack(push)之前的对齐方式 */
-#pragma pack(pop)
-
-typedef struct _domain_item {
-	char *domain;
-	struct _domain_item *next;
-	int  valid;
-} domain_item;
-
-typedef struct _ns {
-	int fd;
-	struct sockaddr_in my_addr;
-	struct sockaddr_in your_addr;
-	int error_ack;   // 1: if error, ack;  0: if error, nack
-	int pause;       // 1: nack
-	domain_item * domain_table;
-} ns;
+# include "structs.h"
 
 /* net */
 ns * my_ns;
@@ -70,44 +7,6 @@ int fd_epoll, ns_count;
 // common
 unsigned char socket_buf[2048];
 char console_buf[2048];
-
-void * xmalloc(size_t size)
-{
-	void *p;
-	p = malloc(size);
-	if (NULL == p) {
-		fprintf(stderr, "malloc failed\n");
-		abort();
-	}
-	return p;
-}
-
-void *xcalloc(size_t nmemb, size_t size)
-{
-	void *p;
-	p = xmalloc(nmemb * size);
-	memset(p, 0, nmemb * size);
-	return p;
-}
-
-char *xstrdup(const char *str)
-{
-	char *p;
-	p = (char *)xmalloc(strlen(str) + 1);
-	strcpy(p, str);
-	return p;
-}
-
-void *xrealloc(void *ptr, size_t size)
-{
-	void *p;
-	p = realloc(ptr, size);
-	if (NULL == p) {
-		fprintf(stderr, "realloc failed\n");
-		abort();
-	}
-	return p;
-}
 
 int setnonblocking(int fd)
 {
@@ -220,7 +119,7 @@ void list_ns()
 
 int parse_domain(int index, char *domain)
 {
-	domain_item *w;
+	domain_item_t *w;
 	w = my_ns[index].domain_table;
 	while(w) {
 		if (strcmp(domain, w->domain) == 0) {
@@ -446,7 +345,7 @@ void ReadConf(char *file_name)
 	unsigned short port;
 	FILE *fp;
 	char *buf, *p, *token;
-	domain_item ** head, *item;
+	domain_item_t ** head, *item;
 	struct in_addr ip_addr;
 	fp = fopen(file_name, "rt");
 	if (NULL == fp) {
@@ -507,7 +406,7 @@ void ReadConf(char *file_name)
 						if (tmp != 0)
 							tmp = 1;
 					}
-					item = (domain_item *)xcalloc(1, sizeof(domain_item));
+					item = (domain_item_t *)xcalloc(1, sizeof(domain_item_t));
 					item->domain = xstrdup(p);
 					item->valid = tmp;
 					head = &my_ns[ns_count - 1].domain_table;
@@ -539,8 +438,10 @@ int main(int argc, char **argv)
 {
 	char *file_name = "mydns.conf";
 	int ret = 0;
-	if (argc > 1)
+	if (argc > 1) {
 		file_name = argv[1];
+	}
+
 	do {
 		ReadConf(file_name);
 		if (0 == ns_count) {

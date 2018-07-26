@@ -8,7 +8,9 @@
         - [查询模式-迭代式](#查询模式-迭代式)
     - [DNS协议](#dns协议)
         - [参考链接](#参考链接)
-        - [DNS协议报文格式](#dns协议报文格式)
+        - [DNS协议报文格式-报头](#dns协议报文格式-报头)
+        - [DNS协议报文格式-查询问题区域](#dns协议报文格式-查询问题区域)
+        - [DNS协议报文格式-资源记录区域](#dns协议报文格式-资源记录区域)
 
 <!-- /TOC -->
 # dns服务器
@@ -39,7 +41,99 @@ DNS分为Client和Server，Client扮演发问的角色，也就是问Server一�
 
 ### 参考链接
 
-### DNS协议报文格式
-
 - DNS协议详解及报文格式分析: <https://blog.csdn.net/tianxuhong/article/details/74922454>
 - DNS协议学习与实现: <https://www.cnblogs.com/dongkuo/p/6714071.html>
+
+### DNS协议报文格式-报头
+
+- 头部报文
+
+|         协议区域-2字节         |         协议区域-2字节          |
+| ------------------------------ | ------------------------------- |
+| Transaction(会话标识)          | Flags(标志)                     |
+| Questions(问题数)              | Answer RRs(回答 资源记录数)     |
+| Authority RRs(授权 资源记录数) | Additional RRs(附加 资源记录数) |
+
+```c
+struct dns_pkt_header_s {   /* 2+2+2*4=12字节 */
+    unsigned short id;  /* 会话标识ID */
+    unsigned short flag;            /* 标志位 */
+    unsigned short questions_count; /* 请求数 */
+    unsigned short answer_RRs;      /* 回答 资源记录数 */
+    unsigned short auth_nameserers; /* 授权 资源记录数 */
+    unsigned short addition_RRs;    /* 附加 资源记录数 */
+};
+```
+
+- flags标志位
+
+```c
+struct flag_s {
+    unsigned short rcode:4; /* 返回码: rcode_return_type */
+    unsigned short zero:3;  /* 预留位 */
+    unsigned short RA:1;    /* 是否支持递归查询 */
+    unsigned short RD:1;    /* 期望服务器递归查询，服务器不一定支持递归查询 */
+    unsigned short TC:1;    /* 消息是否因为传输大小限制而被截断 */
+    unsigned short AA:1;    /* 是否来自权威应答 */
+    unsigned short opcode:4;    /* 指示请求类型：opcode_type */
+    unsigned short QR:1;    /* 指示该消息是请求还是响应 */
+} flag;
+```
+
+### DNS协议报文格式-查询问题区域
+
+|        可变长区域         |       含义        |
+| ------------------------- | ----------------- |
+| Queries                   | 查询问题区域      |
+| Answers                   | 回答 资源记录区域 |
+| Authoritative nameservers | 授权 资源记录区域 |
+| Additional recoreds       | 附加 资源记录区域 |
+
+|  字段  |                    含义                     |
+| ------ | ------------------------------------------- |
+| QNAME  | 查询的主机名，长度标签+长度标签，以0x00结束 |
+| QTYPE  | 2个字节，表示RR的类型                       |
+| QCLASS | 2个字节，表示RR的分类                       |
+
+### DNS协议报文格式-资源记录区域
+
+|        可变长区域         |       含义        |
+| ------------------------- | ----------------- |
+| Queries                   | 查询问题区域      |
+| Answers                   | 回答 资源记录区域 |
+| Authoritative nameservers | 授权 资源记录区域 |
+| Additional recoreds       | 附加 资源记录区域 |
+
+|   字段   |       含义        |
+| -------- | ----------------- |
+| NAME     | 域名              |
+| TYPE     | 类型              |
+| CLASS    | 类                |
+| TTL      | 生存时间          |
+| RDLENGTH | RDATA所占的字节数 |
+| RDATA    | 数据              |
+
+- NAME和RDATA表示的含义根据TYPE的取值不同而不同
+- TYPE共16种
+
+| TYPE  |                value-meaning                |
+| ----- | ------------------------------------------- |
+| A     | 1  由域名获得的IPV4地址                     |
+| NS    | 2  查询域名服务器                           |
+| MD    | 3  a mail destination (Obsolete - use MX)   |
+| MF    | 4  a mail forwarder (Obsolete - use MX)     |
+| CNAME | 5  the canonical name for an alias          |
+| SOA   | 6  开始授权y                                |
+| MB    | 7  a mailbox domain name (EXPERIMENTAL)     |
+| MG    | 8  a mail group member (EXPERIMENTAL)       |
+| MR    | 9  a mail rename domain name (EXPERIMENTAL) |
+| NULL  | 10 a null RR (EXPERIMENTAL)                 |
+| WKS   | 11 熟知服务                                 |
+| PTR   | 12 把ip地址转换成域名                       |
+| HINFO | 13 主机信息 host information                |
+| MINFO | 14 mailbox or mail list information         |
+| MX    | 15 邮件交换 mail exchange                   |
+| TXT   | 16 text strings                             |
+| AAAA  | 28 由域名获得的IPV6地址                     |
+| AXFR  | 252    传送整个区的请求                     |
+| ANY   | 255     对所有记录的请求                    |

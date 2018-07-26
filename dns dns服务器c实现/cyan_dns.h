@@ -47,6 +47,12 @@ typedef enum {
 typedef struct dns_pkt_header_s dns_pkt_header_t;
 struct dns_pkt_header_s {   /* 2+2+2*4=12字节 */
     unsigned short id;  /* 会话标识ID */
+    unsigned short flag;            /* 标志位 */
+    unsigned short questions_count; /* 请求数 */
+    unsigned short answer_RRs;      /* 回答 资源记录数 */
+    unsigned short auth_nameserers; /* 授权 资源记录数 */
+    unsigned short addition_RRs;    /* 附加 资源记录数 */
+
 #if 0
     struct flag_s {
         unsigned short rcode:4; /* 返回码: rcode_return_type */
@@ -59,12 +65,46 @@ struct dns_pkt_header_s {   /* 2+2+2*4=12字节 */
         unsigned short QR:1;    /* 指示该消息是请求还是响应 */
     } flag;
 #endif  
-    unsigned short flag;            /* 标志位 */
-    unsigned short questions_count; /* 请求数 */
-    unsigned short answer_RRs;      /* 回答资源记录数 */
-    unsigned short auth_nameserers; /* 授权区域 */
-    unsigned short addition_RRs;    /* 附加资源记录数 */
 };
 
+#pragma pack(pop)   /* 更新回push前的字节的对齐方式 */
+
+typedef struct domain_item_s {
+	char *domain;
+    int  valid;
+	struct domain_item_s *next;
+} domain_item_t;
+
+typedef struct ns_s {
+    int fd;
+    struct sockaddr_in my_addr;     /* */
+    struct sockaddr_in your_addr;   /* */
+    int error_ack;  /* 1: if error, ack;  0: if error, nack */
+    int pause;
+    domain_item_t *domain_table;
+} ns_t;
+
+#define dns_QR(flag)      (((flag)>>7)&1)
+#define dns_opcode(flag)  (((flag)>>3)&0xf)
+#define dns_AA(flag)      (((flag)>>2)&1)
+#define dns_TC(flag)      (((flag)>>1)&1)
+#define dns_RD(flag)      ((flag)&1)
+#define dns_RA(flag)      (((flag)>>15)&1)
+#define dns_zero(flag)   (((flag)>>12)&0x7)
+#define dns_rcode(flag)   (((flag)>>8)&0xf)
+
+#define s_dns_QR(flag)        ((flag)|=(1<<7))
+#define s_dns_opcode(flag,v)  ((flag)=(flag)&~(0xf<<3)|(v<<3))
+#define s_dns_AA(flag)        ((flag)|=(1<<2))
+#define s_dns_TC(flag)        ((flag)|=(1<<1))
+#define s_dns_RD(flag)        ((flag)|=1)
+#define s_dns_RA(flag)        ((flag)|=(1<<15))
+#define s_dns_rcode(flag,v)   ((flag)=(flag)&~(0xf<<8)|(v<<8))
+
+#define c_dns_QR(flag)        ((flag)&=~(1<<7))
+#define c_dns_AA(flag)        ((flag)&=~(1<<2))
+#define c_dns_TC(flag)        ((flag)&=~(1<<1))
+#define c_dns_RD(flag)        (flag)&=~1)
+#define c_dns_RA(flag)        ((flag)&=~(1<<15))
 
 #endif
