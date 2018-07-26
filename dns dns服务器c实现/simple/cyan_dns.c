@@ -1,14 +1,15 @@
 # include "structs.h"
 
 /* net */
-ns * my_ns;
+
 int fd_epoll, ns_count;
 
 // common
 unsigned char socket_buf[2048];
 char console_buf[2048];
 
-int setnonblocking(int fd)
+/* 设置成非阻塞模式 */
+int set_non_blocking(int fd)
 {
 	if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFD, 0)|O_NONBLOCK ) == -1) {
 		fprintf(stderr, "Set blocking error:%s\n", strerror(errno));
@@ -45,24 +46,25 @@ int init_socket(void)
 		return -1;
 	}
 	for (fd = i = 0; i < ns_count; i ++) {
-		fd = socket(AF_INET, SOCK_DGRAM, 0);
+		fd = socket(AF_INET, SOCK_DGRAM, 0);	/* UDP */
 		if (fd < 0) {
 			fprintf(stderr, "create socket failed: %s\n", strerror(errno));
 			break;
 		}
-		if (setnonblocking(fd))
+		if (set_non_blocking(fd)) {
 			break;
+		}
 /*		if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(opt_val))) {
 			fprintf(stderr, "setsockopt SO_REUSEPORT failed: %s\n", strerror(errno));
 			break;
 		}*/
-		if (bind(fd, (struct sockaddr *)&(my_ns[i].my_addr), sizeof(struct sockaddr)) < 0) {
+		if (bind(fd, (struct sockaddr *)&(g_ns[i].my_addr), sizeof(struct sockaddr)) < 0) {
 			fprintf(stderr, "bind failed: %s\n", strerror(errno));
 			break;
 		}
 		epoll_opt(fd, 1, 0, 0, 1);
-		printf("%s:%u listening ...\n", inet_ntoa(my_ns[i].my_addr.sin_addr), htons(my_ns[i].my_addr.sin_port));
-		my_ns[i].fd = fd;
+		printf("%s:%u listening ...\n", inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
+		g_ns[i].fd = fd;
 		fd = 0;
 	}
 	if (fd) {
@@ -81,8 +83,8 @@ void recycle_all(void)
 	if (fd_epoll > 0)
 		close(fd_epoll);
 	for (i = 0; i < ns_count; i ++) {
-		if (my_ns[i].fd)
-			close(my_ns[i].fd);
+		if (g_ns[i].fd)
+			close(g_ns[i].fd);
 	}
 }
 
@@ -114,13 +116,13 @@ void list_ns()
 {
 	int i;
 	for (i = 0; i < ns_count; i ++)
-		printf("%d %s:%u\n", i, inet_ntoa(my_ns[i].my_addr.sin_addr), htons(my_ns[i].my_addr.sin_port));
+		printf("%d %s:%u\n", i, inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
 }
 
 int parse_domain(int index, char *domain)
 {
 	domain_item_t *w;
-	w = my_ns[index].domain_table;
+	w = g_ns[index].domain_table;
 	while(w) {
 		if (strcmp(domain, w->domain) == 0) {
 			if (0 == w->valid) {
@@ -143,13 +145,13 @@ char no_reocrd[]={0xc0, 0x0c, 0, 0x06, 0, 0x01, 0, 0, 0x03, 0x83, 0, 0x3d, 0x01,
 void dns_resp(int index) {
 	char *p;
 	unsigned int pkt_len, len;
-	dns_pkt_header *pkt;
-	pkt = (dns_pkt_header *)socket_buf;
+	dns_pkt_header_t *pkt;
+	pkt = (dns_pkt_header_t *)socket_buf;
 	s_dns_QR(pkt->flag);
 	s_dns_RA(pkt->flag);
 	s_dns_rcode(pkt->flag, 3);
-	pkt->Auth_RRs = htons(1);
-	pkt_len = sizeof(dns_pkt_header);
+	pkt->auth_RRs = htons(1);
+	pkt_len = sizeof(dns_pkt_header_t);
 #if 0
 	p = (char *)(socket_buf + sizeof(dns_pkt_header));
 	while(1) {
@@ -171,38 +173,38 @@ void dns_resp(int index) {
 	}
 	putchar('\n');*/
 #endif
-	sendto(my_ns[index].fd, socket_buf, pkt_len, 0, (struct sockaddr*)&my_ns[index].your_addr, sizeof(my_ns[index].your_addr));
+	sendto(g_ns[index].fd, socket_buf, pkt_len, 0, (struct sockaddr*)&g_ns[index].your_addr, sizeof(g_ns[index].your_addr));
 	printf("send pkt: %u\n", pkt_len);
 }
 
 void DoDNS(int index)
 {
-	unsigned int i, total_len, len, ques_cnt, Ans_RRs, Auth_RRs, Addi_RRs;
+	unsigned int i, total_len, len, ques_cnt, answer_RRs, auth_RRs, addition_RRs;
 	int error;
 	char *p;                                 
 	char * domain_in;
 	unsigned short type, class;
-	dns_pkt_header *pkt;
+	dns_pkt_header_t *pkt;
 	do {
 		domain_in = NULL;
 		error = 0;
-		pkt = (dns_pkt_header *)socket_buf;
+		pkt = (dns_pkt_header_t *)socket_buf;
 		printf("id = %u\n",	htons(pkt->id));
 		if (dns_QR(pkt->flag) || dns_AA(pkt->flag) || dns_opcode(pkt->flag)) { // no query
 			printf("QR = %u, opcode = %u, AA = %u\n", dns_QR(pkt->flag), dns_opcode(pkt->flag), dns_AA(pkt->flag));
 			error = 1;
 			break;
 		}
-		ques_cnt = htons(pkt->questions);
-		Ans_RRs = htons(pkt->Ans_RRs);
-		Auth_RRs = htons(pkt->Auth_RRs);
-		Addi_RRs = htons(pkt->Addi_RRs);
-		if (Ans_RRs || Auth_RRs || 0 == ques_cnt) {
-			printf("questions = %u, Ans_RRs = %u, Auth_RRs = %u\n", ques_cnt, Ans_RRs, Auth_RRs);
+		ques_cnt = htons(pkt->questions_count);
+		answer_RRs = htons(pkt->answer_RRs);
+		auth_RRs = htons(pkt->auth_RRs);
+		addition_RRs = htons(pkt->addition_RRs);
+		if (answer_RRs || auth_RRs || 0 == ques_cnt) {
+			printf("questions_count = %u, answer_RRs = %u, auth_RRs = %u\n", ques_cnt, answer_RRs, auth_RRs);
 			error = 1;
 			break;
 		}
-		p = (char *)(socket_buf + sizeof(dns_pkt_header));
+		p = (char *)(socket_buf + sizeof(dns_pkt_header_t));
 		/*for (i = 0; i < ques_cnt; i ++)*/ {
 			domain_in = NULL;
 			total_len = 0;
@@ -234,7 +236,7 @@ void DoDNS(int index)
 				error = 1;
 				break;
 			}
-			if (0 == my_ns[index].pause) {
+			if (0 == g_ns[index].pause) {
 				if (parse_domain(index, domain_in)) {
 					printf("unknow domain = %s\n", domain_in);
 					error = 1;
@@ -242,13 +244,13 @@ void DoDNS(int index)
 				}
 			}
 		}
-		if (my_ns[index].pause) {
+		if (g_ns[index].pause) {
 			printf("ns[%d] is pause\n", index);
 			error = 1;
 			break;
 		}
 	} while(0);
-	if (0 == error || my_ns[index].error_ack) {
+	if (0 == error || g_ns[index].error_ack) {
 		dns_resp(index);
 	} else {
 		fprintf(stderr, "nack\n");
@@ -261,7 +263,7 @@ int GetNsIndex(int fd)
 {
 	int i;
 	for(i = 0; i < ns_count; i ++) {
-		if (fd == my_ns[i].fd)
+		if (fd == g_ns[i].fd)
 			break;
 	}
 	return i;
@@ -276,7 +278,7 @@ int loop()
 	struct sockaddr_in client_addr;
 	struct epoll_event ev;
 	// add stdin
-	setnonblocking(STDIN_FILENO);
+	set_non_blocking(STDIN_FILENO);
 	epoll_opt(STDIN_FILENO, 1, 0, 0, 0);
 	b_loop = 1;
 	while(b_loop) {
@@ -302,7 +304,7 @@ int loop()
 				if (fds < 0 || fds >= ns_count) {
 					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", ns_count);
 				} else {
-					my_ns[fds].pause = 1;
+					g_ns[fds].pause = 1;
 					fprintf(stderr, "ns[%d] is pause\n", fds);
 				}
 			}
@@ -311,7 +313,7 @@ int loop()
 				if (fds < 0 || fds >= ns_count) {
 					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", ns_count);
 				} else {
-					my_ns[fds].pause = 0;
+					g_ns[fds].pause = 0;
 					fprintf(stderr, "ns[%d] is resume\n", fds);
 				}
 			}
@@ -330,15 +332,15 @@ int loop()
 			printf("%02u:%02u:%02u.%06u %s:%u > %s:%u\n",
 						   p_time->tm_hour, p_time->tm_min, p_time->tm_sec, current_time.tv_usec,
 						   inet_ntoa(client_addr.sin_addr), htons(client_addr.sin_port),
-						   inet_ntoa(my_ns[i].my_addr.sin_addr), htons(my_ns[i].my_addr.sin_port));
-			memcpy(&my_ns[i].your_addr, &client_addr, sizeof(client_addr));
+						   inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
+			memcpy(&g_ns[i].your_addr, &client_addr, sizeof(client_addr));
 			DoDNS(i);
 		}
 	}
 	return 0;
 }
 
-void ReadConf(char *file_name)
+void read_conf_file(char *file_name)
 {
 	int state;  // 0:none; 1:ns
 	int line_no, tmp;
@@ -347,34 +349,63 @@ void ReadConf(char *file_name)
 	char *buf, *p, *token;
 	domain_item_t ** head, *item;
 	struct in_addr ip_addr;
-	fp = fopen(file_name, "rt");
+
+	fp = fopen(file_name, "rt");	/* 文档模式读取文件 */ 
 	if (NULL == fp) {
 		fprintf(stderr, "open %s failed: %s\n", file_name, strerror(errno));
 		exit(1);
 	}
+
 	state = 0;
 	line_no = 0;
-	buf = (char *)xmalloc(4096);
+	buf = (char *) xmalloc(4096);
 	while(fgets(buf, 4096, fp) != NULL) {
 		p = buf;
-		line_no ++;
-		while(*p && isspace(*p))
-			p ++;
-		if ('\0' == *p || '#' == *p)
+		line_no++;
+
+		/* 跳过空格 */
+		while(*p && isspace(*p)) {
+			p++;
+		}
+
+		/* 路过注释和空行 */
+		if ('\0' == *p || '#' == *p) {
 			continue;
+		}
+
+		/* 配置结束 */
 		if (memcmp(p, "[END]", 5) == 0) {
 			state = 0;
 			continue;
 		}
-		if (1 == state) {
+
+		/* 识别分频道开始位置 */
+		if (0 == state) {{	/* 开关 */
+			if (memcmp(p, "[NAMESERVER]", 12) == 0) {
+				state = 1;
+				g_ns = (ns_t *)xrealloc(g_ns, sizeof(ns_t) * (ns_count + 1));
+				memset(&g_ns[ns_count], 0, sizeof(ns_t));
+				g_ns[ns_count].error_ack = 1;
+				g_ns[ns_count].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
+				g_ns[ns_count].pause = 0;
+				ns_count ++;
+			} else {
+				/* 跳过无效行 */
+				fprintf(stderr, "ignore conf line %d:%s\n", line_no, p);
+			}
+		} else if (1 == state) {
+			/* 分频道内容解析 */
 			if (! memcmp(p, "ip=", 3)) {
 				p += 3;
 				token = p;
-				while (*token && !isspace(*token))
-					token ++;
+				while (*token && !isspace(*token)) {
+					token++;
+				}
+
+				/* 截断后续的内容，获取ip内容 */
 				*token = 0;
 				if (inet_pton(AF_INET, p, &ip_addr) == 1) {
-					memcpy(&my_ns[ns_count - 1].my_addr.sin_addr.s_addr, &ip_addr, sizeof(ip_addr));
+					memcpy(&g_ns[ns_count - 1].my_addr.sin_addr.s_addr, &ip_addr, sizeof(ip_addr));
 				} else {
 					fprintf(stderr, "line %d, %s is not ip\n", p);
 				}
@@ -385,14 +416,14 @@ void ReadConf(char *file_name)
 					fprintf(stderr, "line %d, %s is not valid port number\n", token);
 				} else {
 					port = (unsigned short)tmp;
-					my_ns[ns_count - 1].my_addr.sin_port = htons(port);
+					g_ns[ns_count - 1].my_addr.sin_port = htons(port);
 				}
 			} else if (! memcmp(p, "ack=", 4)) {
 				p += 4;
 				tmp = atoi(token);
 				if (tmp != 0)
 					tmp = 1;
-				my_ns[ns_count - 1].error_ack = tmp;
+				g_ns[ns_count - 1].error_ack = tmp;
 			} else if (! memcmp(p, "domain=", 7)) {
 				p += 7;
 				token = p;
@@ -409,7 +440,7 @@ void ReadConf(char *file_name)
 					item = (domain_item_t *)xcalloc(1, sizeof(domain_item_t));
 					item->domain = xstrdup(p);
 					item->valid = tmp;
-					head = &my_ns[ns_count - 1].domain_table;
+					head = &g_ns[ns_count - 1].domain_table;
 					while (*head)
 						head = &(*head)->next;
 					*head = item;
@@ -417,17 +448,6 @@ void ReadConf(char *file_name)
 			} else {
 				fprintf(stderr, "ignore conf line %d:%s\n", line_no, p);
 			}
-		} else {
-			if (memcmp(p, "[NAMESERVER]", 12) == 0) {
-				state = 1;
-				my_ns = (ns *)xrealloc(my_ns, sizeof(ns) * (ns_count + 1));
-				memset(&my_ns[ns_count], 0, sizeof(ns));
-				my_ns[ns_count].error_ack = 1;
-				my_ns[ns_count].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
-				my_ns[ns_count].pause = 0;
-				ns_count ++;
-			} else
-				fprintf(stderr, "ignore conf line %d:%s\n", line_no, p);
 		}
 	}
 	free(buf);
@@ -443,13 +463,13 @@ int main(int argc, char **argv)
 	}
 
 	do {
-		ReadConf(file_name);
+		read_conf_file(file_name);	/* 读配置文件里面的dns服务器 */
 		if (0 == ns_count) {
-			my_ns = (ns *)xcalloc(1, sizeof(ns));
+			g_ns = (ns_t *)xcalloc(1, sizeof(ns_t));
 			ns_count = 1;
-			my_ns[0].my_addr.sin_family = AF_INET;
-			my_ns[0].my_addr.sin_addr.s_addr = 0x100007f;
-			my_ns[0].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
+			g_ns[0].my_addr.sin_family = AF_INET;
+			g_ns[0].my_addr.sin_addr.s_addr = 0x100007f;
+			g_ns[0].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
 		}
 		if (init_socket()) {
 			ret = -1;

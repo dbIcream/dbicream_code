@@ -50,7 +50,7 @@ struct dns_pkt_header_s {   /* 2+2+2*4=12字节 */
     unsigned short flag;            /* 标志位 */
     unsigned short questions_count; /* 请求数 */
     unsigned short answer_RRs;      /* 回答 资源记录数 */
-    unsigned short auth_nameserers; /* 授权 资源记录数 */
+    unsigned short auth_RRs;        /* 授权 资源记录数 */
     unsigned short addition_RRs;    /* 附加 资源记录数 */
 
 #if 0
