@@ -1,12 +1,9 @@
 # include "structs.h"
 
-/* net */
-
-int fd_epoll, ns_count;
-
-// common
-unsigned char socket_buf[2048];
-char console_buf[2048];
+/* socket 接收的buf大小 */
+#define	MAX_SOCKET_BUF	2048
+unsigned char socket_buf[MAX_SOCKET_BUF];	
+char console_buf[MAX_SOCKET_BUF];
 
 /* 设置成非阻塞模式 */
 int set_non_blocking(int fd)
@@ -18,74 +15,87 @@ int set_non_blocking(int fd)
 	return 0;
 }
 
+/* epoll 操作参数 */
 int epoll_opt(int fd, int in, int out, int delete, int level)
 {
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = 0;
-	if (in)
-		ev.events |= EPOLLIN;
-	if (out)
-		ev.events |= EPOLLOUT;
-	if (! in && ! out)
-		return -1;
-	if (! level)
-		ev.events |= EPOLLET;
-//	ev.events |= EPOLLERR;
+	if (in) {
+        ev.events |= EPOLLIN;
+    }
+		
+	if (out) {
+        ev.events |= EPOLLOUT;
+    }
+
+	if (! in && ! out) {
+        return -1;
+    }
+		
+	if (! level) {
+        ev.events |= EPOLLET;
+    }
+
+    //	ev.events |= EPOLLERR;
 	delete = delete ? EPOLL_CTL_DEL : EPOLL_CTL_ADD;
-	return epoll_ctl(fd_epoll, delete, fd, &ev);
+	return epoll_ctl(g_fd_epoll, delete, fd, &ev);
 }
 
+/* 初始化socket连接 */
 int init_socket(void)
 {
 //	int opt_val = 1;
 	int i, ok, fd;
-	fd_epoll = epoll_create(ns_count);
-	if (fd_epoll < 0) {
+	g_fd_epoll = epoll_create(g_ns_count);	/* 生成epool专用的fd */
+	if (g_fd_epoll < 0) {
 		fprintf(stderr, "epoll_create failed:%s\n", strerror(errno));
 		return -1;
 	}
-	for (fd = i = 0; i < ns_count; i ++) {
+
+	fd = 0;
+	for (i = 0; i < g_ns_count; i ++) {
 		fd = socket(AF_INET, SOCK_DGRAM, 0);	/* UDP */
 		if (fd < 0) {
 			fprintf(stderr, "create socket failed: %s\n", strerror(errno));
 			break;
 		}
-		if (set_non_blocking(fd)) {
+
+		/* 设置新的套接字为非阻塞模式 */
+		if (set_non_blocking(fd)) {	
 			break;
 		}
-/*		if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(opt_val))) {
+
+		/* 设置端口复用 */
+#if 0
+		if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(opt_val))) {
 			fprintf(stderr, "setsockopt SO_REUSEPORT failed: %s\n", strerror(errno));
 			break;
-		}*/
+		}
+#endif
+		/* socket bind */
 		if (bind(fd, (struct sockaddr *)&(g_ns[i].my_addr), sizeof(struct sockaddr)) < 0) {
 			fprintf(stderr, "bind failed: %s\n", strerror(errno));
 			break;
 		}
-		epoll_opt(fd, 1, 0, 0, 1);
+
+		/* 将新的socket添加到监听的epoll中 */
+		epoll_opt(fd, 1, 0, 0, 1);	/* in = 1, out = 0, delete = 0, leverl = 1*/
 		printf("%s:%u listening ...\n", inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
 		g_ns[i].fd = fd;
 		fd = 0;
 	}
+
+	/* 将ns个数添加到全局变量中 */
 	if (fd) {
 		close(fd);
-		ns_count = i;
+		g_ns_count = i;
 	}
-	if (0 == ns_count)
-		return -1;
-	return 0;
-}
 
-void recycle_all(void)
-{
-	int i;
-	// socket
-	if (fd_epoll > 0)
-		close(fd_epoll);
-	for (i = 0; i < ns_count; i ++) {
-		if (g_ns[i].fd)
-			close(g_ns[i].fd);
+	if (0 == g_ns_count) {
+		return -1;
 	}
+	return 0;
 }
 
 unsigned int make_uint(unsigned char *data_in)
@@ -115,8 +125,9 @@ void uint_to_buf(unsigned int ul_value, unsigned char *data_out)
 void list_ns()
 {
 	int i;
-	for (i = 0; i < ns_count; i ++)
+	for (i = 0; i < g_ns_count; i ++) {
 		printf("%d %s:%u\n", i, inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
+	}	
 }
 
 int parse_domain(int index, char *domain)
@@ -152,7 +163,7 @@ void dns_resp(int index) {
 	s_dns_rcode(pkt->flag, 3);
 	pkt->auth_RRs = htons(1);
 	pkt_len = sizeof(dns_pkt_header_t);
-#if 0
+#if 1
 	p = (char *)(socket_buf + sizeof(dns_pkt_header));
 	while(1) {
 		len = (unsigned int)(*(unsigned char *)p);;
@@ -205,7 +216,7 @@ void DoDNS(int index)
 			break;
 		}
 		p = (char *)(socket_buf + sizeof(dns_pkt_header_t));
-		/*for (i = 0; i < ques_cnt; i ++)*/ {
+		for (i = 0; i < ques_cnt; i ++) {
 			domain_in = NULL;
 			total_len = 0;
 			while(1) {
@@ -262,14 +273,14 @@ void DoDNS(int index)
 int GetNsIndex(int fd)
 {
 	int i;
-	for(i = 0; i < ns_count; i ++) {
+	for(i = 0; i < g_ns_count; i ++) {
 		if (fd == g_ns[i].fd)
 			break;
 	}
 	return i;
 }
 
-int loop()
+int epoll_loop()
 {
 	int i, fds, bytes, b_loop;
 	struct tm *p_time;
@@ -282,7 +293,7 @@ int loop()
 	epoll_opt(STDIN_FILENO, 1, 0, 0, 0);
 	b_loop = 1;
 	while(b_loop) {
-		fds = epoll_wait(fd_epoll, &ev, 1, -1);
+		fds = epoll_wait(g_fd_epoll, &ev, 1, -1);
 		if(fds < 0) {
 			fprintf(stderr, "epoll_wait failed:%s\n", strerror(errno));
 			return -1;
@@ -301,8 +312,8 @@ int loop()
 				sleep(1);
 			} else if (! memcmp(console_buf, "nack ", 5)) {
 				fds = atoi(console_buf + 5);
-				if (fds < 0 || fds >= ns_count) {
-					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", ns_count);
+				if (fds < 0 || fds >= g_ns_count) {
+					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", g_ns_count);
 				} else {
 					g_ns[fds].pause = 1;
 					fprintf(stderr, "ns[%d] is pause\n", fds);
@@ -310,8 +321,8 @@ int loop()
 			}
 			else if (! memcmp(console_buf, "ack ", 4)) {
 				fds = atoi(console_buf + 4);
-				if (fds < 0 || fds >= ns_count) {
-					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", ns_count);
+				if (fds < 0 || fds >= g_ns_count) {
+					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", g_ns_count);
 				} else {
 					g_ns[fds].pause = 0;
 					fprintf(stderr, "ns[%d] is resume\n", fds);
@@ -338,145 +349,4 @@ int loop()
 		}
 	}
 	return 0;
-}
-
-void read_conf_file(char *file_name)
-{
-	int state;  // 0:none; 1:ns
-	int line_no, tmp;
-	unsigned short port;
-	FILE *fp;
-	char *buf, *p, *token;
-	domain_item_t ** head, *item;
-	struct in_addr ip_addr;
-
-	fp = fopen(file_name, "rt");	/* 文档模式读取文件 */ 
-	if (NULL == fp) {
-		fprintf(stderr, "open %s failed: %s\n", file_name, strerror(errno));
-		exit(1);
-	}
-
-	state = 0;
-	line_no = 0;
-	buf = (char *) xmalloc(4096);
-	while(fgets(buf, 4096, fp) != NULL) {
-		p = buf;
-		line_no++;
-
-		/* 跳过空格 */
-		while(*p && isspace(*p)) {
-			p++;
-		}
-
-		/* 路过注释和空行 */
-		if ('\0' == *p || '#' == *p) {
-			continue;
-		}
-
-		/* 配置结束 */
-		if (memcmp(p, "[END]", 5) == 0) {
-			state = 0;
-			continue;
-		}
-
-		/* 识别分频道开始位置 */
-		if (0 == state) {{	/* 开关 */
-			if (memcmp(p, "[NAMESERVER]", 12) == 0) {
-				state = 1;
-				g_ns = (ns_t *)xrealloc(g_ns, sizeof(ns_t) * (ns_count + 1));
-				memset(&g_ns[ns_count], 0, sizeof(ns_t));
-				g_ns[ns_count].error_ack = 1;
-				g_ns[ns_count].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
-				g_ns[ns_count].pause = 0;
-				ns_count ++;
-			} else {
-				/* 跳过无效行 */
-				fprintf(stderr, "ignore conf line %d:%s\n", line_no, p);
-			}
-		} else if (1 == state) {
-			/* 分频道内容解析 */
-			if (! memcmp(p, "ip=", 3)) {
-				p += 3;
-				token = p;
-				while (*token && !isspace(*token)) {
-					token++;
-				}
-
-				/* 截断后续的内容，获取ip内容 */
-				*token = 0;
-				if (inet_pton(AF_INET, p, &ip_addr) == 1) {
-					memcpy(&g_ns[ns_count - 1].my_addr.sin_addr.s_addr, &ip_addr, sizeof(ip_addr));
-				} else {
-					fprintf(stderr, "line %d, %s is not ip\n", p);
-				}
-			} else if (! memcmp(p, "port=", 5)) {
-				p += 5;
-				tmp = atoi(token);
-				if (tmp < 0 || tmp >= 65536) {
-					fprintf(stderr, "line %d, %s is not valid port number\n", token);
-				} else {
-					port = (unsigned short)tmp;
-					g_ns[ns_count - 1].my_addr.sin_port = htons(port);
-				}
-			} else if (! memcmp(p, "ack=", 4)) {
-				p += 4;
-				tmp = atoi(token);
-				if (tmp != 0)
-					tmp = 1;
-				g_ns[ns_count - 1].error_ack = tmp;
-			} else if (! memcmp(p, "domain=", 7)) {
-				p += 7;
-				token = p;
-				while (*token && !isspace(*token))
-					token ++;
-				*token ++ = 0;
-				if (*p) {
-					tmp = 1;
-					if (*token) {
-						tmp = atoi(token);
-						if (tmp != 0)
-							tmp = 1;
-					}
-					item = (domain_item_t *)xcalloc(1, sizeof(domain_item_t));
-					item->domain = xstrdup(p);
-					item->valid = tmp;
-					head = &g_ns[ns_count - 1].domain_table;
-					while (*head)
-						head = &(*head)->next;
-					*head = item;
-				}
-			} else {
-				fprintf(stderr, "ignore conf line %d:%s\n", line_no, p);
-			}
-		}
-	}
-	free(buf);
-	fclose(fp);
-}
-
-int main(int argc, char **argv)
-{
-	char *file_name = "mydns.conf";
-	int ret = 0;
-	if (argc > 1) {
-		file_name = argv[1];
-	}
-
-	do {
-		read_conf_file(file_name);	/* 读配置文件里面的dns服务器 */
-		if (0 == ns_count) {
-			g_ns = (ns_t *)xcalloc(1, sizeof(ns_t));
-			ns_count = 1;
-			g_ns[0].my_addr.sin_family = AF_INET;
-			g_ns[0].my_addr.sin_addr.s_addr = 0x100007f;
-			g_ns[0].my_addr.sin_port = htons(DEFAULT_LOCAL_PORT);
-		}
-		if (init_socket()) {
-			ret = -1;
-			break;
-		}
-		ret = loop();
-	} while(0);
-	recycle_all();
-	return ret;
 }
