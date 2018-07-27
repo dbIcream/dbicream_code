@@ -1,4 +1,4 @@
-# include "structs.h"
+#include "cyan_dns.h"
 
 /* socket 接收的buf大小 */
 #define	MAX_SOCKET_BUF	2048
@@ -9,7 +9,7 @@ char console_buf[MAX_SOCKET_BUF];
 int set_non_blocking(int fd)
 {
 	if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFD, 0)|O_NONBLOCK ) == -1) {
-		fprintf(stderr, "Set blocking error:%s\n", strerror(errno));
+		debug_log_printf("Set blocking error:%s\n", strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -47,52 +47,54 @@ int init_socket(void)
 {
 //	int opt_val = 1;
 	int i, ok, fd;
-	g_fd_epoll = epoll_create(g_ns_count);	/* 生成epool专用的fd */
+	g_fd_epoll = epoll_create(g_config.ns_server.ns_count);	/* 生成epool专用的fd */
 	if (g_fd_epoll < 0) {
-		fprintf(stderr, "epoll_create failed:%s\n", strerror(errno));
+		debug_log_printf("epoll_create failed:%s\n", strerror(errno));
 		return -1;
 	}
 
 	fd = 0;
-	for (i = 0; i < g_ns_count; i ++) {
+	for (i = 0; i < g_config.ns_server.ns_count; i ++) {
 		fd = socket(AF_INET, SOCK_DGRAM, 0);	/* UDP */
 		if (fd < 0) {
-			fprintf(stderr, "create socket failed: %s\n", strerror(errno));
-			break;
+			debug_log_printf("create socket failed: %s\n", strerror(errno));
+			return -1;
 		}
 
 		/* 设置新的套接字为非阻塞模式 */
-		if (set_non_blocking(fd)) {	
-			break;
+		if (set_non_blocking(fd)) {
+			close(fd);
+			return -1;
 		}
 
 		/* 设置端口复用 */
 #if 0
 		if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(opt_val))) {
-			fprintf(stderr, "setsockopt SO_REUSEPORT failed: %s\n", strerror(errno));
+			debug_log_printf("setsockopt SO_REUSEPORT failed: %s\n", strerror(errno));
 			break;
 		}
 #endif
 		/* socket bind */
-		if (bind(fd, (struct sockaddr *)&(g_ns[i].my_addr), sizeof(struct sockaddr)) < 0) {
-			fprintf(stderr, "bind failed: %s\n", strerror(errno));
-			break;
+		if (bind(fd, (struct sockaddr *)&(g_config.ns_server.ns[i].my_addr), sizeof(struct sockaddr)) < 0) {
+			debug_log_printf("bind failed: %s\n", strerror(errno));
+			close(fd);
+			return -1;
 		}
 
 		/* 将新的socket添加到监听的epoll中 */
 		epoll_opt(fd, 1, 0, 0, 1);	/* in = 1, out = 0, delete = 0, leverl = 1*/
-		printf("%s:%u listening ...\n", inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
-		g_ns[i].fd = fd;
+		debug_log_printf("%s:%u listening ...\n", inet_ntoa(g_config.ns_server.ns[i].my_addr.sin_addr), htons(g_config.ns_server.ns[i].my_addr.sin_port));
+
+		g_config.ns_server.ns[i].fd = fd;
 		fd = 0;
 	}
 
 	/* 将ns个数添加到全局变量中 */
 	if (fd) {
 		close(fd);
-		g_ns_count = i;
 	}
 
-	if (0 == g_ns_count) {
+	if (0 == g_config.ns_server.ns_count) {
 		return -1;
 	}
 	return 0;
@@ -122,22 +124,14 @@ void uint_to_buf(unsigned int ul_value, unsigned char *data_out)
 	data_out[0] = (unsigned char)(ul_value & 0xFF);
 }
 
-void list_ns()
-{
-	int i;
-	for (i = 0; i < g_ns_count; i ++) {
-		printf("%d %s:%u\n", i, inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
-	}	
-}
-
 int parse_domain(int index, char *domain)
 {
 	domain_item_t *w;
-	w = g_ns[index].domain_table;
+	w = g_config.ns_server.ns[index].domain_table;
 	while(w) {
 		if (strcmp(domain, w->domain) == 0) {
 			if (0 == w->valid) {
-				fprintf(stderr, "find domain %s, but invalid\n", domain);
+				debug_log_printf("find domain %s, but invalid\n", domain);
 				break;
 			}
 			return 0;
@@ -164,28 +158,30 @@ void dns_resp(int index) {
 	pkt->auth_RRs = htons(1);
 	pkt_len = sizeof(dns_pkt_header_t);
 #if 1
-	p = (char *)(socket_buf + sizeof(dns_pkt_header));
+	p = (char *)(socket_buf + sizeof(dns_pkt_header_t));
 	while(1) {
 		len = (unsigned int)(*(unsigned char *)p);;
 		pkt_len += (1 + len);
-		if (0 == len)
+		if (0 == len) {
 			break;
+		}
 		p += (1 +len);
 	}
 	pkt_len += 4;
+	/* 直接添加无记录的应答 */
 	memcpy(socket_buf + pkt_len, no_reocrd, sizeof(no_reocrd));
 	pkt_len += sizeof(no_reocrd);
 /*	int i;
-	printf("len = %u\n", pkt_len);
+	debug_log_printf("len = %u\n", pkt_len);
 	for (i = 0; i < pkt_len; i ++){
-		printf("0x%02x ", socket_buf[i]);
+		debug_log_printf("0x%02x ", socket_buf[i]);
 		if (i % 16 == 15)
 			putchar('\n');
 	}
 	putchar('\n');*/
 #endif
-	sendto(g_ns[index].fd, socket_buf, pkt_len, 0, (struct sockaddr*)&g_ns[index].your_addr, sizeof(g_ns[index].your_addr));
-	printf("send pkt: %u\n", pkt_len);
+	sendto(g_config.ns_server.ns[index].fd, socket_buf, pkt_len, 0, (struct sockaddr*)&g_config.ns_server.ns[index].your_addr, sizeof(g_config.ns_server.ns[index].your_addr));
+	debug_log_printf("send pkt: %u\n", pkt_len);
 }
 
 void DoDNS(int index)
@@ -200,9 +196,9 @@ void DoDNS(int index)
 		domain_in = NULL;
 		error = 0;
 		pkt = (dns_pkt_header_t *)socket_buf;
-		printf("id = %u\n",	htons(pkt->id));
+		debug_log_printf("id = %u\n",	htons(pkt->id));
 		if (dns_QR(pkt->flag) || dns_AA(pkt->flag) || dns_opcode(pkt->flag)) { // no query
-			printf("QR = %u, opcode = %u, AA = %u\n", dns_QR(pkt->flag), dns_opcode(pkt->flag), dns_AA(pkt->flag));
+			debug_log_printf("QR = %u, opcode = %u, AA = %u\n", dns_QR(pkt->flag), dns_opcode(pkt->flag), dns_AA(pkt->flag));
 			error = 1;
 			break;
 		}
@@ -211,7 +207,7 @@ void DoDNS(int index)
 		auth_RRs = htons(pkt->auth_RRs);
 		addition_RRs = htons(pkt->addition_RRs);
 		if (answer_RRs || auth_RRs || 0 == ques_cnt) {
-			printf("questions_count = %u, answer_RRs = %u, auth_RRs = %u\n", ques_cnt, answer_RRs, auth_RRs);
+			debug_log_printf("questions_count = %u, answer_RRs = %u, auth_RRs = %u\n", ques_cnt, answer_RRs, auth_RRs);
 			error = 1;
 			break;
 		}
@@ -223,19 +219,20 @@ void DoDNS(int index)
 				len = (unsigned int)(*(unsigned char *)p ++);
 				if (0 == len)
 					break;
-				domain_in = xrealloc(domain_in, total_len + len + 2);
+				domain_in = (char *) xrealloc(domain_in, total_len + len + 2);
 				strncpy(domain_in + total_len, p, len);
 				total_len += len;
-				domain_in[total_len ++] = '.';
+				domain_in[total_len++] = '.';
 				domain_in[total_len] = '\0';
 				p += len;
 			}
 			if (NULL == domain_in) {
-				printf("no have domain\n");
+				debug_log_printf("no have domain\n");
 				error = 1;
 				break;
 			}
-			printf("domain = %s\n", domain_in);
+			domain_in[total_len - 1] = '\0';
+			debug_log_printf("domain = %s\n", domain_in);
 			type = *((unsigned short *)p);
 			type = htons(type);
 			p += 2;
@@ -243,38 +240,39 @@ void DoDNS(int index)
 			class = htons(class);
 			p += 2;
 			if (type != 1 || class != 1) {
-				printf("type = %u, class = %u\n", type, class);
+				debug_log_printf("type = %u, class = %u\n", type, class);
 				error = 1;
 				break;
 			}
-			if (0 == g_ns[index].pause) {
-				if (parse_domain(index, domain_in)) {
-					printf("unknow domain = %s\n", domain_in);
+			if (0 == g_config.ns_server.ns[index].pause) {
+				if (parse_domain(index, domain_in) == -1) {
+					debug_log_printf("unknow domain = %s\n", domain_in);
 					error = 1;
 					break;
 				}
 			}
 		}
-		if (g_ns[index].pause) {
-			printf("ns[%d] is pause\n", index);
+		if (g_config.ns_server.ns[index].pause) {
+			debug_log_printf("ns[%d] is pause\n", index);
 			error = 1;
 			break;
 		}
 	} while(0);
-	if (0 == error || g_ns[index].error_ack) {
+	if (0 == error || g_config.ns_server.ns[index].error_ack) {
 		dns_resp(index);
 	} else {
-		fprintf(stderr, "nack\n");
+		debug_log_printf("nack\n");
 	}
-	if (domain_in)
+	if (domain_in) {
 		free(domain_in);
+	}
 }
 
 int GetNsIndex(int fd)
 {
 	int i;
-	for(i = 0; i < g_ns_count; i ++) {
-		if (fd == g_ns[i].fd)
+	for(i = 0; i < g_config.ns_server.ns_count; i ++) {
+		if (fd == g_config.ns_server.ns[i].fd)
 			break;
 	}
 	return i;
@@ -295,7 +293,7 @@ int epoll_loop()
 	while(b_loop) {
 		fds = epoll_wait(g_fd_epoll, &ev, 1, -1);
 		if(fds < 0) {
-			fprintf(stderr, "epoll_wait failed:%s\n", strerror(errno));
+			debug_log_printf("epoll_wait failed:%s\n", strerror(errno));
 			return -1;
 		}
 		if (0 == fds)
@@ -312,24 +310,24 @@ int epoll_loop()
 				sleep(1);
 			} else if (! memcmp(console_buf, "nack ", 5)) {
 				fds = atoi(console_buf + 5);
-				if (fds < 0 || fds >= g_ns_count) {
-					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", g_ns_count);
+				if (fds < 0 || fds >= g_config.ns_server.ns_count) {
+					debug_log_printf("Invalid parameters, nack 0 ~ %d\n", g_config.ns_server.ns_count);
 				} else {
-					g_ns[fds].pause = 1;
-					fprintf(stderr, "ns[%d] is pause\n", fds);
+					g_config.ns_server.ns[fds].pause = 1;
+					debug_log_printf("ns[%d] is pause\n", fds);
 				}
 			}
 			else if (! memcmp(console_buf, "ack ", 4)) {
 				fds = atoi(console_buf + 4);
-				if (fds < 0 || fds >= g_ns_count) {
-					fprintf(stderr, "Invalid parameters, nack 0 ~ %d\n", g_ns_count);
+				if (fds < 0 || fds >= g_config.ns_server.ns_count) {
+					debug_log_printf("Invalid parameters, nack 0 ~ %d\n", g_config.ns_server.ns_count);
 				} else {
-					g_ns[fds].pause = 0;
-					fprintf(stderr, "ns[%d] is resume\n", fds);
+					g_config.ns_server.ns[fds].pause = 0;
+					debug_log_printf("ns[%d] is resume\n", fds);
 				}
 			}
 			else if (console_buf[0] != '\r' && console_buf[0] != '\n') {
-				fprintf(stderr, "unknow command %s", console_buf);
+				debug_log_printf("unknow command %s", console_buf);
 			}
 		} else {
 			socklen_t addrlen =	sizeof(struct sockaddr_in);
@@ -343,8 +341,8 @@ int epoll_loop()
 			printf("%02u:%02u:%02u.%06u %s:%u > %s:%u\n",
 						   p_time->tm_hour, p_time->tm_min, p_time->tm_sec, current_time.tv_usec,
 						   inet_ntoa(client_addr.sin_addr), htons(client_addr.sin_port),
-						   inet_ntoa(g_ns[i].my_addr.sin_addr), htons(g_ns[i].my_addr.sin_port));
-			memcpy(&g_ns[i].your_addr, &client_addr, sizeof(client_addr));
+						   inet_ntoa(g_config.ns_server.ns[i].my_addr.sin_addr), htons(g_config.ns_server.ns[i].my_addr.sin_port));
+			memcpy(&g_config.ns_server.ns[i].your_addr, &client_addr, sizeof(client_addr));
 			DoDNS(i);
 		}
 	}

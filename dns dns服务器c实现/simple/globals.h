@@ -1,10 +1,8 @@
 #ifndef __GLOBAL_H__
 #define __GLOBAL_H__
 
-extern ns_t * g_ns;     /* link of ns */
-extern int g_ns_count;  /* count of ns */
-extern int g_fd_epoll;  /*  */
-
+extern config_t g_config;   /* 配置 */
+extern int g_fd_epoll;      /* 全局的epoll的fd */
 
 
 #endif

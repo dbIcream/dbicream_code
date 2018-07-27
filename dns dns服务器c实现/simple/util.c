@@ -2,21 +2,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <sys/epoll.h>
-#include <arpa/inet.h>
-#include <sys/mman.h>
-#include <errno.h>
-#include <time.h>
+
+#include "protos.h"
 
 void * xmalloc(size_t size)
 {
 	void *p;
 	p = malloc(size);
 	if (NULL == p) {
-		fprintf(stderr, "malloc failed\n");
+		debug_log_printf("malloc failed\n");
 		abort();
 	}
 	return p;
@@ -43,7 +37,7 @@ void *xrealloc(void *ptr, size_t size)
 	void *p;
 	p = realloc(ptr, size);
 	if (NULL == p) {
-		fprintf(stderr, "realloc failed\n");
+		debug_log_printf("realloc failed\n");
 		abort();
 	}
 	return p;
